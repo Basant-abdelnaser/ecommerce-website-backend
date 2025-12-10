@@ -7,7 +7,7 @@ const {
   clearCart,
   getcartTotal,
   getCartForUser,
-  mergeLOcalCart,
+  syncCart,
 } = require("../controllers/cart.controller");
 const {
   verifyToken,
@@ -23,7 +23,6 @@ router.put("/update", verifyToken, updatecartItem);
 router.delete("/clear", verifyToken, clearCart);
 router.delete("/:itemId", verifyToken, deletecartItem);
 router.get("/total", verifyToken, getcartTotal);
-router.post("/merge", verifyToken, mergeLOcalCart);
-
+router.post("/sync", verifyToken, syncCart);
 
 module.exports = router;

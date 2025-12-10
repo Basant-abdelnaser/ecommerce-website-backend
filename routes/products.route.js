@@ -21,7 +21,7 @@ router.get("/", getAllProducts);
 router.put(
   "/:id",
   verifyToken,
-  verifyAdmin,
+
   upload.single("image"),
   updateProduct
 );

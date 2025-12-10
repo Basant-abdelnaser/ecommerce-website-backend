@@ -118,15 +118,55 @@ exports.getCartForUser = asynchandler(async (req, res) => {
   const cartItems = cart.products;
   return res.status(200).json({ cartItems });
 });
-exports.mergeLOcalCart = asynchandler(async (req, res) => {
-  const userId = req.user._id;
-  const localCart = req.body;
- for(const item of localCart){
-  await Cart.findOneAndUpdate(
-    { user: userId, "products.product": item.product },
-    { $inc: { "products.$.quantity": item.quantity } },
-    { new: true, upsert: true }
-  )
- }
-  return res.status(200).json({ message: "Cart merged successfully" });
-})
+
+exports.syncCart = asynchandler(async (req, res) => {
+  const userId = req.user.id || req.user._id;
+  const { items } = req.body;
+
+  if (!items || !Array.isArray(items)) {
+    return res.status(400).json({ message: "Invalid cart items" });
+  }
+
+  // Find user's cart
+  let cart = await Cart.findOne({ user: userId });
+
+  if (!cart) {
+    // Create new cart with items
+    cart = await Cart.create({
+      user: userId,
+      products: items.map((item) => ({
+        product: item.product,
+        quantity: item.quantity,
+      })),
+    });
+  } else {
+    // Merge items
+    for (const item of items) {
+      const existingItemIndex = cart.products.findIndex(
+        (cartItem) => cartItem.product.toString() === item.product
+      );
+
+      if (existingItemIndex > -1) {
+        // Add to existing quantity
+        cart.products[existingItemIndex].quantity += item.quantity;
+      } else {
+        // Add new item
+        cart.products.push({
+          product: item.product,
+          quantity: item.quantity,
+        });
+      }
+    }
+
+    await cart.save();
+  }
+
+  // Populate product details
+  await cart.populate("products.product", "name price image stock");
+
+  res.status(200).json({
+    message: "Cart synced successfully",
+    cart,
+    itemsAdded: items.length,
+  });
+});
